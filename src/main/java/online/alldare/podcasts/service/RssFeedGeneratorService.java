@@ -3,6 +3,7 @@ package online.alldare.podcasts.service;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import online.alldare.podcasts.constant.PodcastConstants;
 import online.alldare.podcasts.domain.PodcastEpisode;
 import online.alldare.podcasts.domain.PodcastShow;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,7 +12,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class RssFeedGeneratorService {
 
-    private static final DateTimeFormatter RFC_1123_FORMATTER = DateTimeFormatter.RFC_1123_DATE_TIME.withZone(ZoneId.of("GMT"));
+    private static final DateTimeFormatter RFC_1123_FORMATTER = DateTimeFormatter.RFC_1123_DATE_TIME
+            .withZone(ZoneId.of(PodcastConstants.TIMEZONE_GMT));
 
     @Value("${alldare.podcasts.feed-base-url:https://podcasts.alldare.online}")
     private String feedBaseUrl;
@@ -27,8 +29,8 @@ public class RssFeedGeneratorService {
         xml.append("    <title>").append(escapeXml(show.getTitle())).append("</title>\n");
         xml.append("    <link>").append(feedBaseUrl).append("/podcasts/shows/").append(escapeXml(show.getSlug())).append("</link>\n");
         xml.append("    <description>").append(escapeXml(show.getDescription())).append("</description>\n");
-        xml.append("    <language>en-us</language>\n");
-        xml.append("    <copyright>Copyright ").append(show.getCreatedAt().atZone(ZoneId.of("GMT")).getYear()).append(" ").append(escapeXml(show.getAuthorName())).append("</copyright>\n");
+        xml.append("    <language>").append(PodcastConstants.DEFAULT_LANGUAGE).append("</language>\n");
+        xml.append("    <copyright>Copyright ").append(show.getCreatedAt().atZone(ZoneId.of(PodcastConstants.TIMEZONE_GMT)).getYear()).append(" ").append(escapeXml(show.getAuthorName())).append("</copyright>\n");
         xml.append("    <atom:link href=\"").append(feedBaseUrl).append("/podcasts/shows/").append(show.getSlug()).append("/rss.xml\" rel=\"self\" type=\"application/rss+xml\"/>\n");
         xml.append("    <itunes:author>").append(escapeXml(show.getAuthorName())).append("</itunes:author>\n");
         xml.append("    <itunes:summary>").append(escapeXml(show.getDescription())).append("</itunes:summary>\n");
@@ -44,7 +46,7 @@ public class RssFeedGeneratorService {
         xml.append("    <itunes:category text=\"").append(escapeXml(show.getCategory())).append("\"/>\n\n");
 
         for (PodcastEpisode episode : episodes) {
-            String streamExt = episode.getMediaType().contains("video") ? "mp4" : "mp3";
+            String streamExt = episode.getMediaType().contains("video") ? PodcastConstants.MEDIA_EXT_MP4 : PodcastConstants.MEDIA_EXT_MP3;
             String enclosureUrl = feedBaseUrl + "/podcasts/stream/" + episode.getId() + "." + streamExt;
             String pubDateStr = RFC_1123_FORMATTER.format(episode.getPublishedAt());
 
@@ -89,7 +91,7 @@ public class RssFeedGeneratorService {
         xml.append("  </author>\n");
 
         for (PodcastEpisode episode : episodes) {
-            String streamExt = episode.getMediaType().contains("video") ? "mp4" : "mp3";
+            String streamExt = episode.getMediaType().contains("video") ? PodcastConstants.MEDIA_EXT_MP4 : PodcastConstants.MEDIA_EXT_MP3;
             String enclosureUrl = feedBaseUrl + "/podcasts/stream/" + episode.getId() + "." + streamExt;
 
             xml.append("  <entry>\n");

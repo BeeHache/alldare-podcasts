@@ -2,10 +2,13 @@ package online.alldare.podcasts.service;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.URL;
 
 import online.alldare.common.messaging.RedisMessagePublisher;
 import online.alldare.common.messaging.StreamKeys;
+import online.alldare.podcasts.constant.PodcastConstants;
 import online.alldare.podcasts.domain.PodcastEpisode;
 import online.alldare.podcasts.repository.PodcastEpisodeRepository;
 import org.slf4j.Logger;
@@ -33,8 +36,8 @@ public class PodcastStreamProxyService {
             // Step 1: Query alldare-ads for Dynamic Audio Injection spot (if not subscriber)
             if (!isSubscriber) {
                 log.info("Piping Dynamic Audio/Video Sponsor Ad pre-roll for episode ID: {}", episode.getId());
-                // Stream sponsor ad bytes from CDN (Sample 5s sponsor audio spot)
-                String adUrl = cdnBaseUrl + "/ads/sponsors/default_preroll.mp3";
+                // Stream sponsor ad bytes from CDN
+                String adUrl = cdnBaseUrl + PodcastConstants.DEFAULT_PREROLL_AD_PATH;
                 pipeUrlToOutputStream(adUrl, outputStream);
                 
                 // Track impression asynchronously
@@ -59,13 +62,20 @@ public class PodcastStreamProxyService {
     private void pipeUrlToOutputStream(String fileUrl, OutputStream outputStream) {
         try {
             URI uri = URI.create(fileUrl);
-            try (InputStream in = uri.toURL().openStream()) {
-                byte[] buffer = new byte[8192];
+            URL url = uri.toURL();
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setConnectTimeout(PodcastConstants.CONNECT_TIMEOUT_MS);
+            connection.setReadTimeout(PodcastConstants.READ_TIMEOUT_MS);
+
+            try (InputStream in = connection.getInputStream()) {
+                byte[] buffer = new byte[PodcastConstants.STREAM_BUFFER_SIZE];
                 int bytesRead;
                 while ((bytesRead = in.read(buffer)) != -1) {
                     outputStream.write(buffer, 0, bytesRead);
                 }
                 outputStream.flush();
+            } finally {
+                connection.disconnect();
             }
         } catch (Exception e) {
             log.warn("Could not stream media from URL: {} - Error: {}", fileUrl, e.getMessage());

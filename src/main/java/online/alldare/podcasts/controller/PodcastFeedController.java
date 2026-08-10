@@ -4,11 +4,13 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import online.alldare.podcasts.constant.PodcastConstants;
 import online.alldare.podcasts.domain.PodcastEpisode;
 import online.alldare.podcasts.domain.PodcastShow;
 import online.alldare.podcasts.repository.PodcastEpisodeRepository;
@@ -33,9 +35,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class PodcastFeedController {
 
-    private static final CacheControl FEED_CACHE_CONTROL = CacheControl.maxAge(java.time.Duration.ofSeconds(300))
+    private static final CacheControl FEED_CACHE_CONTROL = CacheControl.maxAge(Duration.ofSeconds(PodcastConstants.CACHE_MAX_AGE_SECONDS))
             .cachePublic()
-            .sMaxAge(java.time.Duration.ofSeconds(600));
+            .sMaxAge(Duration.ofSeconds(PodcastConstants.CACHE_S_MAX_AGE_SECONDS));
 
     @Autowired
     private PodcastShowRepository showRepository;
@@ -64,7 +66,7 @@ public class PodcastFeedController {
         return ResponseEntity.ok()
                 .cacheControl(FEED_CACHE_CONTROL)
                 .eTag(etag)
-                .header(HttpHeaders.CONTENT_TYPE, "application/rss+xml; charset=UTF-8")
+                .header(HttpHeaders.CONTENT_TYPE, PodcastConstants.CONTENT_TYPE_RSS_XML)
                 .body(rssXml);
     }
 
@@ -81,7 +83,7 @@ public class PodcastFeedController {
         return ResponseEntity.ok()
                 .cacheControl(FEED_CACHE_CONTROL)
                 .eTag(etag)
-                .header(HttpHeaders.CONTENT_TYPE, "application/atom+xml; charset=UTF-8")
+                .header(HttpHeaders.CONTENT_TYPE, PodcastConstants.CONTENT_TYPE_ATOM_XML)
                 .body(atomXml);
     }
 
@@ -101,8 +103,8 @@ public class PodcastFeedController {
 
             PodcastEpisode episode = episodeOpt.get();
             response.setStatus(HttpStatus.OK.value());
-            response.setContentType("audio/mpeg");
-            response.setHeader("Transfer-Encoding", "chunked");
+            response.setContentType(PodcastConstants.CONTENT_TYPE_AUDIO_MPEG);
+            response.setHeader("Transfer-Encoding", PodcastConstants.TRANSFER_ENCODING_CHUNKED);
 
             OutputStream outputStream = response.getOutputStream();
             streamProxyService.streamEpisodeWithDai(episode, outputStream, isSubscriber);
@@ -125,8 +127,8 @@ public class PodcastFeedController {
 
             PodcastEpisode episode = episodeOpt.get();
             response.setStatus(HttpStatus.OK.value());
-            response.setContentType("video/mp4");
-            response.setHeader("Transfer-Encoding", "chunked");
+            response.setContentType(PodcastConstants.CONTENT_TYPE_VIDEO_MP4);
+            response.setHeader("Transfer-Encoding", PodcastConstants.TRANSFER_ENCODING_CHUNKED);
 
             OutputStream outputStream = response.getOutputStream();
             streamProxyService.streamEpisodeWithDai(episode, outputStream, isSubscriber);

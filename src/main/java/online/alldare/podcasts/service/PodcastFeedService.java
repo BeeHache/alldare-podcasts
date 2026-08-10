@@ -2,6 +2,7 @@ package online.alldare.podcasts.service;
 
 import java.util.List;
 import java.util.Optional;
+import online.alldare.podcasts.constant.PodcastConstants;
 import online.alldare.podcasts.domain.PodcastEpisode;
 import online.alldare.podcasts.domain.PodcastShow;
 import online.alldare.podcasts.repository.PodcastEpisodeRepository;
@@ -31,7 +32,7 @@ public class PodcastFeedService {
     @Autowired(required = false)
     private CacheManager cacheManager;
 
-    @Cacheable(value = "podcast_rss_feeds", key = "#slug")
+    @Cacheable(value = PodcastConstants.CACHE_RSS_FEEDS, key = "#slug")
     public Optional<String> getRssFeed(String slug) {
         log.debug("Cache miss for RSS feed of show slug: {}", slug);
         Optional<PodcastShow> showOpt = showRepository.findBySlug(slug);
@@ -43,7 +44,7 @@ public class PodcastFeedService {
         return Optional.of(feedGeneratorService.generateRss2Feed(show, episodes));
     }
 
-    @Cacheable(value = "podcast_atom_feeds", key = "#slug")
+    @Cacheable(value = PodcastConstants.CACHE_ATOM_FEEDS, key = "#slug")
     public Optional<String> getAtomFeed(String slug) {
         log.debug("Cache miss for Atom feed of show slug: {}", slug);
         Optional<PodcastShow> showOpt = showRepository.findBySlug(slug);
@@ -55,17 +56,17 @@ public class PodcastFeedService {
         return Optional.of(feedGeneratorService.generateAtomFeed(show, episodes));
     }
 
-    @CacheEvict(value = {"podcast_rss_feeds", "podcast_atom_feeds"}, key = "#slug")
+    @CacheEvict(value = {PodcastConstants.CACHE_RSS_FEEDS, PodcastConstants.CACHE_ATOM_FEEDS}, key = "#slug")
     public void evictShowFeedCache(String slug) {
         log.info("Evicted RSS and Atom feed cache for show slug: {}", slug);
     }
 
-    @CacheEvict(value = {"podcast_rss_feeds", "podcast_atom_feeds"}, allEntries = true)
+    @CacheEvict(value = {PodcastConstants.CACHE_RSS_FEEDS, PodcastConstants.CACHE_ATOM_FEEDS}, allEntries = true)
     public void evictFeedCache() {
         log.info("Evicted all entries from podcast_rss_feeds and podcast_atom_feeds caches");
         if (cacheManager != null) {
-            Optional.ofNullable(cacheManager.getCache("podcast_rss_feeds")).ifPresent(c -> c.clear());
-            Optional.ofNullable(cacheManager.getCache("podcast_atom_feeds")).ifPresent(c -> c.clear());
+            Optional.ofNullable(cacheManager.getCache(PodcastConstants.CACHE_RSS_FEEDS)).ifPresent(c -> c.clear());
+            Optional.ofNullable(cacheManager.getCache(PodcastConstants.CACHE_ATOM_FEEDS)).ifPresent(c -> c.clear());
         }
     }
 }

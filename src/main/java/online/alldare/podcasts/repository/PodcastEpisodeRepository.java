@@ -13,4 +13,5 @@ public interface PodcastEpisodeRepository extends JpaRepository<PodcastEpisode, 
     List<PodcastEpisode> findByShowOrderByPublishedAtDesc(PodcastShow show);
     List<PodcastEpisode> findByShowIdOrderByPublishedAtDesc(UUID showId);
     Optional<PodcastEpisode> findByPostId(UUID postId);
+    void deleteByShow(PodcastShow show);
 }

@@ -24,6 +24,10 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import org.springframework.http.MediaType;
+import tools.jackson.databind.ObjectMapper;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -33,6 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PodcastFeedControllerTest {
 
     private MockMvc mockMvc;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Mock
     private PodcastShowRepository showRepository;
@@ -132,12 +137,12 @@ class PodcastFeedControllerTest {
     @Test
     void shouldDeleteShowById() throws Exception {
         UUID showId = testShow.getId();
-        given(showRepository.existsById(showId)).willReturn(true);
+        given(showRepository.findById(showId)).willReturn(Optional.of(testShow));
 
         mockMvc.perform(delete("/api/v1/podcasts/shows/" + showId))
                 .andExpect(status().isNoContent());
 
-        verify(showRepository).deleteById(showId);
+        verify(showRepository).delete(testShow);
         verify(feedService).evictFeedCache();
     }
 
@@ -173,5 +178,65 @@ class PodcastFeedControllerTest {
 
         verify(episodeRepository).deleteById(episodeId);
         verify(feedService).evictFeedCache();
+    }
+
+    @Test
+    void shouldCreateEpisode() throws Exception {
+        given(episodeRepository.save(org.mockito.ArgumentMatchers.any())).willReturn(testEpisode);
+
+        mockMvc.perform(post("/api/v1/podcasts/episodes")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(testEpisode)))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void shouldGetAtomFeed() throws Exception {
+        given(feedService.getAtomFeed("building-alldare")).willReturn(Optional.of("<feed></feed>"));
+
+        mockMvc.perform(get("/podcasts/shows/building-alldare/atom.xml"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("<feed></feed>"));
+    }
+
+    @Test
+    void shouldReturn404WhenShowNotFoundBySlug() throws Exception {
+        given(showRepository.findBySlug("nonexistent")).willReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/v1/podcasts/shows/nonexistent"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void shouldUpdateShow() throws Exception {
+        given(showRepository.findById(testShow.getId())).willReturn(Optional.of(testShow));
+        given(showRepository.save(org.mockito.ArgumentMatchers.any())).willReturn(testShow);
+
+        mockMvc.perform(put("/api/v1/podcasts/shows/" + testShow.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(testShow)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void shouldUpdateEpisode() throws Exception {
+        given(episodeRepository.findById(testEpisode.getId())).willReturn(Optional.of(testEpisode));
+        given(episodeRepository.save(org.mockito.ArgumentMatchers.any())).willReturn(testEpisode);
+
+        mockMvc.perform(put("/api/v1/podcasts/episodes/" + testEpisode.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(testEpisode)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void shouldReturn404WhenEpisodeToUpdateNotFound() throws Exception {
+        UUID missingId = UUID.randomUUID();
+        given(episodeRepository.findById(missingId)).willReturn(Optional.empty());
+
+        mockMvc.perform(put("/api/v1/podcasts/episodes/" + missingId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(testEpisode)))
+                .andExpect(status().isNotFound());
     }
 }

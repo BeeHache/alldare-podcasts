@@ -140,10 +140,30 @@ public class PodcastFeedController {
     // --- Podcast Show CRUD Endpoints ---
 
     @PostMapping("/api/v1/podcasts/shows")
-    public ResponseEntity<PodcastShow> createShow(@RequestBody PodcastShow show) {
+    public ResponseEntity<?> createShow(@RequestBody PodcastShow show) {
+        if (show.getSlug() == null || show.getSlug().trim().isEmpty()) {
+            if (show.getTitle() != null && !show.getTitle().trim().isEmpty()) {
+                show.setSlug(show.getTitle().toLowerCase().trim().replaceAll("[^a-z0-9-]+", "-").replaceAll("^-+|-+$", ""));
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Show title or slug is required.");
+            }
+        } else {
+            show.setSlug(show.getSlug().toLowerCase().trim().replaceAll("[^a-z0-9-]+", "-").replaceAll("^-+|-+$", ""));
+        }
+
+        // Slug uniqueness check
+        if (showRepository.findBySlug(show.getSlug()).isPresent()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Slug '" + show.getSlug() + "' is already in use by another podcast.");
+        }
+
         if (show.getId() == null) {
             show.setId(UUID.randomUUID());
         }
+        if (show.getCreatedAt() == null) {
+            show.setCreatedAt(Instant.now());
+        }
+        show.setUpdatedAt(Instant.now());
+
         PodcastShow savedShow = showRepository.save(show);
         feedService.evictFeedCache();
         return ResponseEntity.status(HttpStatus.CREATED).body(savedShow);
@@ -163,13 +183,21 @@ public class PodcastFeedController {
     }
 
     @PutMapping("/api/v1/podcasts/shows/{id}")
-    public ResponseEntity<PodcastShow> updateShow(@PathVariable("id") UUID id, @RequestBody PodcastShow showDetails) {
+    public ResponseEntity<?> updateShow(@PathVariable("id") UUID id, @RequestBody PodcastShow showDetails) {
         Optional<PodcastShow> showOpt = showRepository.findById(id);
         if (showOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
         PodcastShow existingShow = showOpt.get();
+        if (showDetails.getSlug() != null && !showDetails.getSlug().trim().isEmpty()) {
+            String newSlug = showDetails.getSlug().toLowerCase().trim().replaceAll("[^a-z0-9-]+", "-").replaceAll("^-+|-+$", "");
+            if (!newSlug.equals(existingShow.getSlug()) && showRepository.findBySlug(newSlug).isPresent()) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body("Slug '" + newSlug + "' is already in use by another podcast.");
+            }
+            existingShow.setSlug(newSlug);
+        }
+
         if (showDetails.getTitle() != null) {
             existingShow.setTitle(showDetails.getTitle());
         }
@@ -188,9 +216,6 @@ public class PodcastFeedController {
         if (showDetails.getCoverImageUrl() != null) {
             existingShow.setCoverImageUrl(showDetails.getCoverImageUrl());
         }
-        if (showDetails.getSlug() != null) {
-            existingShow.setSlug(showDetails.getSlug());
-        }
         existingShow.setExplicit(showDetails.isExplicit());
         existingShow.setUpdatedAt(Instant.now());
 
@@ -199,12 +224,16 @@ public class PodcastFeedController {
         return ResponseEntity.ok(updatedShow);
     }
 
+    @org.springframework.transaction.annotation.Transactional
     @DeleteMapping("/api/v1/podcasts/shows/{id}")
     public ResponseEntity<Void> deleteShow(@PathVariable("id") UUID id) {
-        if (!showRepository.existsById(id)) {
+        Optional<PodcastShow> showOpt = showRepository.findById(id);
+        if (showOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-        showRepository.deleteById(id);
+        PodcastShow show = showOpt.get();
+        episodeRepository.deleteByShow(show);
+        showRepository.delete(show);
         feedService.evictFeedCache();
         return ResponseEntity.noContent().build();
     }

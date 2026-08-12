@@ -3,6 +3,7 @@ package online.alldare.podcasts.service;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import online.alldare.common.constants.MediaTypes;
 import online.alldare.podcasts.constant.PodcastConstants;
 import online.alldare.podcasts.domain.PodcastEpisode;
 import online.alldare.podcasts.domain.PodcastShow;
@@ -31,7 +32,7 @@ public class RssFeedGeneratorService {
         xml.append("    <description>").append(escapeXml(show.getDescription())).append("</description>\n");
         xml.append("    <language>").append(PodcastConstants.DEFAULT_LANGUAGE).append("</language>\n");
         xml.append("    <copyright>Copyright ").append(show.getCreatedAt().atZone(ZoneId.of(PodcastConstants.TIMEZONE_GMT)).getYear()).append(" ").append(escapeXml(show.getAuthorName())).append("</copyright>\n");
-        xml.append("    <atom:link href=\"").append(feedBaseUrl).append("/podcasts/shows/").append(show.getSlug()).append("/rss.xml\" rel=\"self\" type=\"application/rss+xml\"/>\n");
+        xml.append("    <atom:link href=\"").append(feedBaseUrl).append("/podcasts/shows/").append(show.getSlug()).append("/rss.xml\" rel=\"self\" type=\"").append(MediaTypes.APPLICATION_RSS_XML_RAW).append("\"/>\n");
         xml.append("    <itunes:author>").append(escapeXml(show.getAuthorName())).append("</itunes:author>\n");
         xml.append("    <itunes:summary>").append(escapeXml(show.getDescription())).append("</itunes:summary>\n");
         xml.append("    <itunes:owner>\n");

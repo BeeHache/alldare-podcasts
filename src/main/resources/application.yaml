@@ -31,7 +31,8 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${AUTH_ISSUER_URI:http://localhost:9000}
+          jwk-set-uri: ${AUTH_JWK_SET_URI:http://alldare-auth:9000/oauth2/jwks}
+          issuer-uri: ${AUTH_ISSUER_URI:http://alldare-auth:9000}
 
   servlet:
     multipart:

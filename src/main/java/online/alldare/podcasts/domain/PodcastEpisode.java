@@ -9,6 +9,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
+import online.alldare.common.constants.MediaTypes;
 
 @Entity
 @Table(name = "podcast_episodes")
@@ -40,7 +41,7 @@ public class PodcastEpisode {
     private String mediaUrl;
 
     @Column(name = "media_type", nullable = false)
-    private String mediaType = "audio/mpeg";
+    private String mediaType = MediaTypes.AUDIO_MPEG;
 
     @Column(name = "duration_seconds", nullable = false)
     private int durationSeconds = 0;
@@ -67,7 +68,7 @@ public class PodcastEpisode {
         this.episodeNumber = episodeNumber;
         this.seasonNumber = seasonNumber;
         this.mediaUrl = mediaUrl;
-        this.mediaType = mediaType != null ? mediaType : "audio/mpeg";
+        this.mediaType = mediaType != null ? mediaType : MediaTypes.AUDIO_MPEG;
         this.durationSeconds = durationSeconds;
         this.fileSizeBytes = fileSizeBytes;
         this.publishedAt = publishedAt != null ? publishedAt : Instant.now();

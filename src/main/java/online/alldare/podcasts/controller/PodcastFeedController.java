@@ -51,6 +51,63 @@ public class PodcastFeedController {
     @Autowired
     private PodcastStreamProxyService streamProxyService;
 
+    @Autowired
+    private online.alldare.podcasts.service.DirectorySyndicationService directorySyndicationService;
+
+    @Autowired
+    private online.alldare.podcasts.repository.PodcastSyndicationWatermarkRepository watermarkRepository;
+
+    @Autowired
+    private online.alldare.podcasts.messaging.ScheduledBulkSyndicationWorker bulkSyndicationWorker;
+
+    // --- Syndication Endpoints ---
+
+    @GetMapping("/api/v1/podcasts/shows/{showId}/syndication")
+    public ResponseEntity<List<online.alldare.podcasts.domain.PodcastSyndication>> getSyndicationStatus(@PathVariable("showId") UUID showId) {
+        return ResponseEntity.ok(directorySyndicationService.getSyndicationsForShow(showId));
+    }
+
+    @GetMapping("/api/v1/podcasts/syndication/watermarks")
+    public ResponseEntity<List<online.alldare.podcasts.domain.PodcastSyndicationWatermark>> getSyndicationWatermarks() {
+        return ResponseEntity.ok(watermarkRepository.findAll());
+    }
+
+    @PostMapping("/api/v1/podcasts/syndication/trigger/{directory}")
+    public ResponseEntity<Void> triggerBulkSyndication(@PathVariable("directory") String directory) {
+        try {
+            online.alldare.podcasts.domain.enums.DirectoryName dirName = online.alldare.podcasts.domain.enums.DirectoryName.valueOf(directory.toUpperCase());
+            bulkSyndicationWorker.executeDirectoryBulkSyndication(dirName);
+            return ResponseEntity.accepted().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/api/v1/podcasts/shows/{showId}/syndication/{directory}/claim-token")
+    public ResponseEntity<online.alldare.podcasts.domain.PodcastSyndication> generateClaimToken(
+            @PathVariable("showId") UUID showId,
+            @PathVariable("directory") String directory) {
+        try {
+            online.alldare.podcasts.domain.enums.DirectoryName dirName = online.alldare.podcasts.domain.enums.DirectoryName.valueOf(directory.toUpperCase());
+            return ResponseEntity.ok(directorySyndicationService.generateClaimToken(showId, dirName));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/api/v1/podcasts/shows/{showId}/syndication/{directory}/transfer-ownership")
+    public ResponseEntity<online.alldare.podcasts.domain.PodcastSyndication> transferOwnership(
+            @PathVariable("showId") UUID showId,
+            @PathVariable("directory") String directory,
+            @RequestParam(name = "claimToken", required = false) String claimToken) {
+        try {
+            online.alldare.podcasts.domain.enums.DirectoryName dirName = online.alldare.podcasts.domain.enums.DirectoryName.valueOf(directory.toUpperCase());
+            return ResponseEntity.ok(directorySyndicationService.transferOwnershipToCreator(showId, dirName, claimToken));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
     // --- RSS / Atom Feed Endpoints ---
 
     @GetMapping(value = "/podcasts/shows/{slug}/rss.xml", produces = MediaType.APPLICATION_XML_VALUE)

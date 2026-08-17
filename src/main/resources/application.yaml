@@ -31,8 +31,10 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: ${AUTH_JWK_SET_URI:http://alldare-auth:9000/oauth2/jwks}
-          issuer-uri: ${AUTH_ISSUER_URI:http://alldare-auth:9000}
+          jwk-set-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI:${AUTH_JWK_SET_URI:${AUTH_SERVICE_URL:http://alldare-auth:9000}/oauth2/jwks}}
+          issuer-uri: ${AUTH_ISSUER_URI:${AUTH_SERVICE_URL:http://alldare-auth:9000}}
+
+
 
   servlet:
     multipart:
@@ -42,7 +44,8 @@ spring:
 alldare:
   podcasts:
     cdn-base-url: ${CDN_BASE_URL:https://cdn.alldare.online}
-    feed-base-url: ${FEED_BASE_URL:https://podcasts.alldare.online}
+    feed-base-url: ${PODCAST_URL:${FEED_BASE_URL:https://podcasts.alldare.online}}
+
     syndication:
       enabled: ${SYNDICATION_ENABLED:true}
       batch-size: ${SYNDICATION_BATCH_SIZE:100}

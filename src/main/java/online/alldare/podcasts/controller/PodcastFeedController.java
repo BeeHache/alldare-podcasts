@@ -194,6 +194,24 @@ public class PodcastFeedController {
         }
     }
 
+    public static final String DEFAULT_COVER_URL = "https://alldare.local/assets/images/default-podcast-cover.jpg";
+
+    private boolean isValidUrl(String url) {
+        if (url == null || url.trim().isEmpty()) {
+            return false;
+        }
+        String trimmed = url.trim();
+        if (trimmed.startsWith("/assets/")) {
+            return true;
+        }
+        try {
+            java.net.URI uri = java.net.URI.create(trimmed);
+            return uri.isAbsolute() && (uri.getScheme().equalsIgnoreCase("http") || uri.getScheme().equalsIgnoreCase("https"));
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     // --- Podcast Show CRUD Endpoints ---
 
     @PostMapping("/api/v1/podcasts/shows")
@@ -211,6 +229,12 @@ public class PodcastFeedController {
         // Slug uniqueness check
         if (showRepository.findBySlug(show.getSlug()).isPresent()) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("Slug '" + show.getSlug() + "' is already in use by another podcast.");
+        }
+
+        if (show.getCoverImageUrl() == null || show.getCoverImageUrl().trim().isEmpty()) {
+            show.setCoverImageUrl(DEFAULT_COVER_URL);
+        } else if (!isValidUrl(show.getCoverImageUrl())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid cover image URL format.");
         }
 
         if (show.getId() == null) {
@@ -247,13 +271,7 @@ public class PodcastFeedController {
         }
 
         PodcastShow existingShow = showOpt.get();
-        if (showDetails.getSlug() != null && !showDetails.getSlug().trim().isEmpty()) {
-            String newSlug = showDetails.getSlug().toLowerCase().trim().replaceAll("[^a-z0-9-]+", "-").replaceAll("^-+|-+$", "");
-            if (!newSlug.equals(existingShow.getSlug()) && showRepository.findBySlug(newSlug).isPresent()) {
-                return ResponseEntity.status(HttpStatus.CONFLICT).body("Slug '" + newSlug + "' is already in use by another podcast.");
-            }
-            existingShow.setSlug(newSlug);
-        }
+        // The URL slug is strictly immutable after creation to preserve RSS feeds & external directory links.
 
         if (showDetails.getTitle() != null) {
             existingShow.setTitle(showDetails.getTitle());
@@ -271,7 +289,14 @@ public class PodcastFeedController {
             existingShow.setEmail(showDetails.getEmail());
         }
         if (showDetails.getCoverImageUrl() != null) {
-            existingShow.setCoverImageUrl(showDetails.getCoverImageUrl());
+            String trimmedCover = showDetails.getCoverImageUrl().trim();
+            if (trimmedCover.isEmpty()) {
+                existingShow.setCoverImageUrl(DEFAULT_COVER_URL);
+            } else if (!isValidUrl(trimmedCover)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid cover image URL format.");
+            } else {
+                existingShow.setCoverImageUrl(trimmedCover);
+            }
         }
         existingShow.setExplicit(showDetails.isExplicit());
         existingShow.setUpdatedAt(Instant.now());

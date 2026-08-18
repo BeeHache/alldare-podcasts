@@ -219,6 +219,24 @@ class PodcastFeedControllerTest {
     }
 
     @Test
+    void shouldUpdateShowPropertiesExceptSlug() throws Exception {
+        given(showRepository.findById(testShow.getId())).willReturn(Optional.of(testShow));
+        given(showRepository.save(org.mockito.ArgumentMatchers.any())).willAnswer(invocation -> invocation.getArgument(0));
+
+        PodcastShow updatePayload = new PodcastShow(testShow.getId(), testShow.getCreatorId(), "new-attempted-slug", "New Show Title",
+                "New Description", "Education", "New Author", "new@alldare.online",
+                "https://cdn.alldare.online/new_cover.jpg", true);
+
+        mockMvc.perform(put("/api/v1/podcasts/shows/" + testShow.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updatePayload)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.slug").value("building-alldare"))
+                .andExpect(jsonPath("$.title").value("New Show Title"))
+                .andExpect(jsonPath("$.category").value("Education"));
+    }
+
+    @Test
     void shouldUpdateEpisode() throws Exception {
         given(episodeRepository.findById(testEpisode.getId())).willReturn(Optional.of(testEpisode));
         given(episodeRepository.save(org.mockito.ArgumentMatchers.any())).willReturn(testEpisode);
@@ -238,5 +256,31 @@ class PodcastFeedControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(testEpisode)))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void shouldRejectInvalidCoverImageUrlOnCreate() throws Exception {
+        PodcastShow invalidShow = new PodcastShow(null, UUID.randomUUID(), "invalid-cover-show", "Invalid Cover Show",
+                "Description", "Technology", "Author", "author@alldare.online", "invalid_url_string", false);
+
+        mockMvc.perform(post("/api/v1/podcasts/shows")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(invalidShow)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("Invalid cover image URL format."));
+    }
+
+    @Test
+    void shouldRejectInvalidCoverImageUrlOnUpdate() throws Exception {
+        given(showRepository.findById(testShow.getId())).willReturn(Optional.of(testShow));
+
+        PodcastShow updatePayload = new PodcastShow(testShow.getId(), testShow.getCreatorId(), testShow.getSlug(), "Title",
+                "Description", "Category", "Author", "author@alldare.online", "bad_url_format", false);
+
+        mockMvc.perform(put("/api/v1/podcasts/shows/" + testShow.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updatePayload)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("Invalid cover image URL format."));
     }
 }

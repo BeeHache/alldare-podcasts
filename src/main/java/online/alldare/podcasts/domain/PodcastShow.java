@@ -17,7 +17,7 @@ public class PodcastShow {
     @Column(name = "creator_id", nullable = false)
     private UUID creatorId;
 
-    @Column(name = "slug", nullable = false, unique = true)
+    @Column(name = "slug", nullable = false, unique = true, updatable = false)
     private String slug;
 
     @Column(name = "title", nullable = false)

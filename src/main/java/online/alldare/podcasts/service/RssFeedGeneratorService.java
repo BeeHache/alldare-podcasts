@@ -5,6 +5,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import online.alldare.common.constants.MediaTypes;
 import online.alldare.podcasts.constant.PodcastConstants;
+import online.alldare.podcasts.controller.PodcastFeedController;
 import online.alldare.podcasts.domain.PodcastEpisode;
 import online.alldare.podcasts.domain.PodcastShow;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,9 +42,10 @@ public class RssFeedGeneratorService {
         xml.append("    </itunes:owner>\n");
         xml.append("    <itunes:explicit>").append(show.isExplicit() ? "yes" : "no").append("</itunes:explicit>\n");
         
-        if (show.getCoverImageUrl() != null && !show.getCoverImageUrl().isBlank()) {
-            xml.append("    <itunes:image href=\"").append(escapeXml(show.getCoverImageUrl())).append("\"/>\n");
-        }
+        String coverUrl = (show.getCoverImageUrl() != null && !show.getCoverImageUrl().isBlank())
+                ? show.getCoverImageUrl()
+                : PodcastFeedController.DEFAULT_COVER_URL;
+        xml.append("    <itunes:image href=\"").append(escapeXml(coverUrl)).append("\"/>\n");
         xml.append("    <itunes:category text=\"").append(escapeXml(show.getCategory())).append("\"/>\n\n");
 
         for (PodcastEpisode episode : episodes) {

@@ -25,6 +25,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -252,9 +253,11 @@ public class PodcastFeedController {
 
     @GetMapping("/api/v1/podcasts/shows/{slug}")
     public ResponseEntity<PodcastShow> getShowBySlug(@PathVariable("slug") String slug) {
-        return showRepository.findBySlug(slug)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        Optional<PodcastShow> showOpt = showRepository.findBySlug(slug);
+        if (showOpt.isEmpty() || !showOpt.get().isPublic()) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(showOpt.get());
     }
 
     @GetMapping("/api/v1/podcasts/shows/creator/{creatorId}")
@@ -299,9 +302,29 @@ public class PodcastFeedController {
             }
         }
         existingShow.setExplicit(showDetails.isExplicit());
+        existingShow.setPublic(showDetails.isPublic());
         existingShow.setUpdatedAt(Instant.now());
 
         PodcastShow updatedShow = showRepository.save(existingShow);
+        feedService.evictFeedCache();
+        return ResponseEntity.ok(updatedShow);
+    }
+
+    @PutMapping("/api/v1/podcasts/shows/{id}/visibility")
+    @PatchMapping("/api/v1/podcasts/shows/{id}/visibility")
+    @PostMapping("/api/v1/podcasts/shows/{id}/visibility")
+    public ResponseEntity<PodcastShow> toggleShowVisibility(
+            @PathVariable("id") UUID id,
+            @RequestParam(name = "isPublic", required = false) Boolean isPublicParam) {
+        Optional<PodcastShow> showOpt = showRepository.findById(id);
+        if (showOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        PodcastShow show = showOpt.get();
+        boolean targetState = isPublicParam != null ? isPublicParam : !show.isPublic();
+        show.setPublic(targetState);
+        show.setUpdatedAt(Instant.now());
+        PodcastShow updatedShow = showRepository.save(show);
         feedService.evictFeedCache();
         return ResponseEntity.ok(updatedShow);
     }

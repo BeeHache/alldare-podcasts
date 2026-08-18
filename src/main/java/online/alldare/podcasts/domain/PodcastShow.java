@@ -41,6 +41,10 @@ public class PodcastShow {
     @Column(name = "explicit", nullable = false)
     private boolean explicit = false;
 
+    @Column(name = "is_public", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonProperty("isPublic")
+    private boolean isPublic = true;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
@@ -143,6 +147,15 @@ public class PodcastShow {
 
     public void setExplicit(boolean explicit) {
         this.explicit = explicit;
+    }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("isPublic")
+    public boolean isPublic() {
+        return isPublic;
+    }
+
+    public void setPublic(boolean isPublic) {
+        this.isPublic = isPublic;
     }
 
     public Instant getCreatedAt() {

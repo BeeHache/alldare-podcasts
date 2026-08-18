@@ -32,11 +32,11 @@ public class PodcastFeedService {
     @Autowired(required = false)
     private CacheManager cacheManager;
 
-    @Cacheable(value = PodcastConstants.CACHE_RSS_FEEDS, key = "#slug")
+    @Cacheable(value = PodcastConstants.CACHE_RSS_FEEDS, key = "#slug", unless = "#result == null")
     public Optional<String> getRssFeed(String slug) {
         log.debug("Cache miss for RSS feed of show slug: {}", slug);
         Optional<PodcastShow> showOpt = showRepository.findBySlug(slug);
-        if (showOpt.isEmpty()) {
+        if (showOpt.isEmpty() || !showOpt.get().isPublic()) {
             return Optional.empty();
         }
         PodcastShow show = showOpt.get();
@@ -44,11 +44,11 @@ public class PodcastFeedService {
         return Optional.of(feedGeneratorService.generateRss2Feed(show, episodes));
     }
 
-    @Cacheable(value = PodcastConstants.CACHE_ATOM_FEEDS, key = "#slug")
+    @Cacheable(value = PodcastConstants.CACHE_ATOM_FEEDS, key = "#slug", unless = "#result == null")
     public Optional<String> getAtomFeed(String slug) {
         log.debug("Cache miss for Atom feed of show slug: {}", slug);
         Optional<PodcastShow> showOpt = showRepository.findBySlug(slug);
-        if (showOpt.isEmpty()) {
+        if (showOpt.isEmpty() || !showOpt.get().isPublic()) {
             return Optional.empty();
         }
         PodcastShow show = showOpt.get();
